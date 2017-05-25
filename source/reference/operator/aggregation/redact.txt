@@ -43,19 +43,19 @@ Definition
 
       * - _`$$DESCEND`
 
-        - :pipeline:`$redact` returns the fields at the current document level,
-          excluding embedded documents. To include embedded documents and
-          embedded documents within arrays, apply the :expression:`$cond`
-          expression to the embedded documents to determine access for these
-          embedded documents.
+        - :pipeline:`$redact` returns the fields at the current
+          document level, excluding embedded documents. To include
+          embedded documents and embedded documents within arrays,
+          apply the :expression:`$cond` expression to the embedded
+          documents to determine access for these embedded documents.
 
       * - _`$$PRUNE`
 
         - :pipeline:`$redact` excludes all fields at this current
-          document/embedded document level, **without** further inspection of
-          any of the excluded fields. This applies even if the excluded
-          field contains embedded documents that may have different access
-          levels.
+          document/embedded document level, **without** further
+          inspection of any of the excluded fields. This applies even
+          if the excluded field contains embedded documents that may
+          have different access permissions.
 
       * - _`$$KEEP`
 
@@ -63,7 +63,7 @@ Definition
           current document/embedded document level, **without** further
           inspection of the fields at this level. This applies even if
           the included field contains embedded documents that may have
-          different access levels.
+          different access permissions.
 
 Examples
 --------
@@ -155,8 +155,8 @@ The aggregation operation returns the following "redacted" document:
 
 .. seealso:: :expression:`$size`, :expression:`$setIntersection`
 
-Exclude All Fields at a Given Level
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Exclude All Fields at a Given Permission Level
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A collection ``accounts`` contains the following document:
 
@@ -164,26 +164,26 @@ A collection ``accounts`` contains the following document:
 
   {
     _id: 1,
-    level: 1,
+    permission_level: 1,
     acct_id: "xyz123",
     cc: {
-      level: 5,
+      permission_level: 5,
       type: "yy",
       num: 000000000000,
       exp_date: ISODate("2015-11-01T00:00:00.000Z"),
       billing_addr: {
-        level: 5,
+        permission_level: 5,
         addr1: "123 ABC Street",
         city: "Some City"
       },
       shipping_addr: [
         {
-          level: 3,
+          permission_level: 3,
           addr1: "987 XYZ Ave",
           city: "Some City"
         },
         {
-          level: 3,
+          permission_level: 3,
           addr1: "PO Box 0123",
           city: "Some City"
         }
@@ -192,13 +192,13 @@ A collection ``accounts`` contains the following document:
     status: "A"
   }
 
-In this example document, the ``level`` field determines the access
-level required to view the data.
+In this example document, the ``permission_level`` field determines the
+permission level required to view the data.
 
-To run a query on all documents with status ``A`` and exclude *all*
-fields contained in a document/embedded document at level ``5``, include a
-:pipeline:`$redact` stage that specifies the system variable
-``"$$PRUNE"`` in the ``then`` field:
+To run a query on every document with status ``A`` and exclude *all*
+fields contained in a document/embedded document with permission level
+``5``, include a :pipeline:`$redact` stage that specifies the system
+variable ``"$$PRUNE"`` in the ``then`` field:
 
 .. code-block:: javascript
 
@@ -208,7 +208,7 @@ fields contained in a document/embedded document at level ``5``, include a
       {
         $redact: {
           $cond: {
-            if: { $eq: [ "$level", 5 ] },
+            if: { $eq: [ "$permission_level", 5 ] },
             then: "$$PRUNE",
             else: "$$DESCEND"
           }
@@ -217,10 +217,11 @@ fields contained in a document/embedded document at level ``5``, include a
     ]
   );
 
-The :pipeline:`$redact` stage evaluates the ``level`` field to
-determine access. If the ``level`` field equals ``5``, then exclude all
-fields at that level, even if the excluded field contains embedded documents
-that may have different ``level`` values, such as the ``shipping_addr``
+The :pipeline:`$redact` stage evaluates the ``permission_level`` field
+to determine access. If ``permission_level`` equals ``5``,
+:pipeline:`$redact` excludes all fields at that document level
+even if an excluded field contains an embedded document that has
+a different ``permission_level`` value, such as the ``shipping_addr``
 field.
 
 The aggregation operation returns the following "redacted" document:
@@ -229,15 +230,17 @@ The aggregation operation returns the following "redacted" document:
 
   {
     "_id" : 1,
-    "level" : 1,
+    "permission_level" : 1,
     "acct_id" : "xyz123",
     "status" : "A"
   }
 
-The result set shows that the :pipeline:`$redact` stage excluded
-the field ``cc`` as a whole, including the ``shipping_addr`` field
-which contained embedded documents that had ``level`` field values equal to
-``3`` and not ``5``.
+The result set shows that the entire ``cc`` field was redacted. This
+includes the ``shipping_addr`` field despite it containing embedded
+documents that have ``permission_level`` field values other than ``5``.
 
-.. seealso:: :doc:`/tutorial/implement-field-level-redaction` for
+.. seealso::
+   :doc:`/tutorial/implement-field-level-redaction` for
    steps to set up multiple combinations of access for the same data.
+   :doc:`/reference/method/db.createView` for an alternative method of
+   restricting access to data.
